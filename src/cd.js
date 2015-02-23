@@ -4,16 +4,26 @@ var common = require('./common');
 //@
 //@ ### cd('dir')
 //@ Changes to directory `dir` for the duration of the script
-function _cd(options, dir) {
+function _cd(options, dir, cb) {
   if (!dir)
-    common.error('directory not specified');
+    cb(new Error('directory not specified'));
 
-  if (!fs.existsSync(dir))
-    common.error('no such file or directory: ' + dir);
+  fs.exists(dir, function(exists) {
+    if (!exists) return cb(new Error('no such file or directory: ' + dir));
 
-  if (!fs.statSync(dir).isDirectory())
-    common.error('not a directory: ' + dir);
+    fs.stat(dir, function(err, stat) {
+      if (err) return cb(err);
 
-  process.chdir(dir);
+      if (!stat.isDirectory()) return cb(new Error('not a directory: ' + dir));
+
+      try {
+        process.chdir(dir);
+      } catch (err) {
+        return cb(err);
+      }
+
+      cb(null, dir);
+    });
+  });
 }
 module.exports = _cd;
